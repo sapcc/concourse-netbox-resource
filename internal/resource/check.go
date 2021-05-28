@@ -1,10 +1,17 @@
 package resource
 
 import (
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/sapcc/go-netbox-go/dcim"
 	"github.com/sapcc/go-netbox-go/models"
 	fl "github.com/tbe/resource-framework/log"
 )
+
+type tmpHolder struct {
+	Name        string
+	Status      string
+	LastUpdated string
+}
 
 func (r *NetboxResource) Check() (version interface{}, err error) {
 	log := fl.NewDefaultLogger()
@@ -35,8 +42,26 @@ func (r *NetboxResource) Check() (version interface{}, err error) {
 		log.Error("error listing netbox devices: %s", err)
 		return nil, err
 	}
+	tmpArray := make([]tmpHolder, res.Count)
 	for _, v := range res.Results {
-		log.Warn("%v\n", v.Name)
+		tmp := tmpHolder{
+			Name:        v.Name,
+			Status:      v.Status.Value,
+			LastUpdated: v.LastUpdated,
+		}
+		log.Warn("%v\n", tmp)
+		tmpArray = append(tmpArray, tmp)
 	}
-	return nil, nil
+	hash, err := hashstructure.Hash(tmpArray, hashstructure.FormatV2, nil)
+	if err != nil {
+		log.Error("error generating hash: %s", err)
+		return nil, err
+	}
+	log.Info("Hash: %d\n", hash)
+	if hash == r.version.Hash {
+		return NetboxVersion{}, nil
+	} else {
+		r.version.Hash = hash
+		return r.version, nil
+	}
 }
