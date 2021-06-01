@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM keppel.eu-de-1.cloud.sap/ccloud-dockerhub-mirror/library/golang:alpine AS builder
 
 RUN apk update && apk add --no-cache git ca-certificates && update-ca-certificates
 
