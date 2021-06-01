@@ -1,6 +1,8 @@
 package resource
 
 import (
+	"strconv"
+
 	"github.com/mitchellh/hashstructure/v2"
 	"github.com/sapcc/go-netbox-go/dcim"
 	"github.com/sapcc/go-netbox-go/models"
@@ -58,10 +60,11 @@ func (r *NetboxResource) Check() (version interface{}, err error) {
 		return nil, err
 	}
 	log.Info("Hash: %d\n", hash)
-	if hash == r.version.Hash {
-		return NetboxVersion{}, nil
+	hashstr := strconv.FormatUint(hash, 10)
+	if hashstr == r.version.Hash {
+		return []NetboxVersion{}, nil
 	} else {
-		r.version.Hash = hash
-		return r.version, nil
+		r.version.Hash = hashstr
+		return []NetboxVersion{*r.version}, nil
 	}
 }

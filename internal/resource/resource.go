@@ -5,8 +5,9 @@ type NetboxSource struct {
 	NetboxToken string `json:"netbox-token"`
 	APod        string `json:"apod"`
 }
+
 type NetboxVersion struct {
-	Hash uint64 `json:"hash"`
+	Hash string `json:"hash"`
 }
 
 type NetboxParams struct{}
