@@ -1,0 +1,66 @@
+name: 'Validate the code'
+on:
+  push:
+    branches-ignore:
+      - 'master'
+jobs:
+  validateCode:
+    runs-on: 'ubuntu-24.04'
+    permissions:
+      contents: 'read'
+    steps:
+      - name: 'checkout code'
+        uses: 'actions/checkout@v5.0.0'
+        with:
+          fetch-depth: 0
+      - name: 'populate env vars'
+        shell: 'bash'
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          GIT_COMMIT="$(git rev-parse HEAD)"
+          GIT_TAG="$(git name-rev --tags --name-only ${GIT_COMMIT})"
+          BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          LDFLAGS="-X 'github.com/sapcc/concourse-netbox-resource/internal/helper.gitCommit=${GIT_COMMIT}' -X 'github.com/sapcc/concourse-netbox-resource/internal/helper.buildDate=${BUILD_DATE}' -X 'github.com/sapcc/concourse-netbox-resource/internal/helper.gitVersion=${GIT_TAG}'"
+          GO_VERSION="$(go list -f {{.GoVersion}} -m)"
+          echo "GIT_COMMIT=${GIT_COMMIT}" >> "$GITHUB_ENV"
+          echo "GIT_TAG=${GIT_TAG}" >> "$GITHUB_ENV"
+          echo "BUILD_DATE=${BUILD_DATE}" >> "$GITHUB_ENV"
+          echo "LDFLAGS=${LDFLAGS}" >> "$GITHUB_ENV"
+          echo "GO_VERSION=${GO_VERSION}" >> "$GITHUB_ENV"
+      - name: 'setup go'
+        uses: 'actions/setup-go@v6.0.0'
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+      - name: 'golangci-lint'
+        uses: 'golangci/golangci-lint-action@v8.0.0'
+        with:
+          version: 'v2.4.0'
+      - name: 'govulncheck'
+        shell: 'bash'
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck -format text -show verbose ./...
+      - name: 'go test'
+        shell: 'bash'
+        run: 'go test -ldflags "${LDFLAGS}" -cover ./...'
+      - name: 'go build'
+        shell: 'bash'
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          go build -ldflags "${LDFLAGS}" -o check main.go
+      - name: 'validate version'
+        shell: 'bash'
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          ./check -v | grep -q "${GIT_TAG}"
+          ./check -c in -v | grep -q "${GIT_TAG}"
+          ./check -c out -v | grep -q "${GIT_TAG}"
