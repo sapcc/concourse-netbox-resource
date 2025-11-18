@@ -1,40 +1,57 @@
-name: 'Publish release after PR approval'
+name: 'build image and publish release'
 on:
   push:
     branches:
       - "master"
+    paths-ignore:
+      - '.github/**'
 jobs:
-  buildImage:
+  createRelease:
     runs-on: 'ubuntu-24.04'
     permissions:
       contents: 'write'
+      packages: 'write'
     steps:
       - name: 'checkout code'
         uses: 'actions/checkout@v5.0.0'
+      - name: 'install mdq'
+        shell: 'bash'
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          curl -LO https://github.com/yshavit/mdq/releases/download/v0.9.0/mdq-linux-x64.tar.gz
+          tar -xf mdq-linux-x64.tar.gz
+          rm mdq-linux-x64.tar.gz
       - name: 'populate env vars'
         shell: 'bash'
         run: |
           #!/usr/bin/env bash
           set -euo pipefail
 
+          GIT_TAG="$(./mdq -o json "#" CHANGELOG.md | jq -r .items[0].section.body[0].section.title)"
           GIT_COMMIT="$(git rev-parse HEAD)"
-          GIT_TAG="$(git name-rev --tags --name-only ${GIT_COMMIT})"
-          BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          LDFLAGS="-X 'github.com/sapcc/concourse-netbox-resource/internal/helper.gitCommit=${GIT_COMMIT}' -X 'github.com/sapcc/concourse-netbox-resource/internal/helper.buildDate=${BUILD_DATE}' -X 'github.com/sapcc/concourse-netbox-resource/internal/helper.gitVersion=${GIT_TAG}'"
-          GO_VERSION="$(go list -f {{.GoVersion}} -m)"
-          echo "GIT_COMMIT=${GIT_COMMIT}" >> "$GITHUB_ENV"
           echo "GIT_TAG=${GIT_TAG}" >> "$GITHUB_ENV"
-          echo "BUILD_DATE=${BUILD_DATE}" >> "$GITHUB_ENV"
-          echo "LDFLAGS=${LDFLAGS}" >> "$GITHUB_ENV"
-          echo "GO_VERSION=${GO_VERSION}" >> "$GITHUB_ENV"
+          echo "GIT_COMMIT=${GIT_COMMIT}" >> "$GITHUB_ENV"
       - name: 'validate env vars'
         shell: 'bash'
         run: |
           #!/usr/bin/env bash
           set -euo pipefail
 
-          if [ "${GIT_TAG}" == "undefined" ]; then
-            echo "no valid git tag found"
+          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9]+)\.(0|[1-9]+)\.(0|[1-9]+)$ ]]; then
+            echo "Invalid version format: ${GIT_TAG} does not match pattern vX.Y.Z"
+            echo 'Examples:'
+            echo -e "  valid:\t0.0.1"
+            echo -e "  invalid:\t00.0.1"
+            echo -e "  invalid:\t01.0.1"
+            echo -e "  valid:\t1.0.1"
+            echo 'Please check the CHANGELOG.md for a valid version heading'
+            exit 1
+          fi
+
+          if git tag --list "${GIT_TAG}" | grep -q "${GIT_TAG}";then
+            echo "A Git tag already exists for the version ${GIT_TAG} found in the CHANGELOG.md"
             exit 1
           fi
       - name: 'setup go'
@@ -53,11 +70,9 @@ jobs:
         with:
           images: "ghcr.io/${{ github.repository }}"
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=schedule,pattern={{date 'YYYYMMDD-hhmmss'}}
+            type=raw,value=${{ env.GIT_TAG }}
             type=raw,value=release
+            type=raw,value=latest
       - name: 'build and push image'
         uses: 'docker/build-push-action@v6.18.0'
         with:
@@ -67,52 +82,15 @@ jobs:
           tags: "${{ steps.meta.outputs.tags }}"
           platforms: 'linux/amd64'
           push: true
-  createRelease:
-    runs-on: 'ubuntu-24.04'
-    needs: 'buildImage'
-    permissions:
-      contents: 'write'
-    steps:
-      - name: 'checkout code'
-        uses: 'actions/checkout@v5.0.0'
-      - name: 'populate env vars'
-        shell: 'bash'
-        run: |
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          GIT_COMMIT="$(git rev-parse HEAD)"
-          GIT_TAG="$(git name-rev --tags --name-only ${GIT_COMMIT})"
-          echo "GIT_COMMIT=${GIT_COMMIT}" >> "$GITHUB_ENV"
-          echo "GIT_TAG=${GIT_TAG}" >> "$GITHUB_ENV"
-      - name: 'validate env vars'
-        shell: 'bash'
-        run: |
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          if [ "${GIT_TAG}" == "undefined" ]; then
-            echo "no valid git tag found"
-            exit 1
-          fi
-      - name: 'install mdq'
-        shell: 'bash'
-        run: |
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          curl -LO https://github.com/yshavit/mdq/releases/download/v0.9.0/mdq-linux-x64.tar.gz
-          tar -xf mdq-linux-x64.tar.gz
-          rm mdq-linux-x64.tar.gz
       - name: 'maintain changelog'
         shell: 'bash'
         run: |
           #!/usr/bin/env bash
           set -euo pipefail
 
-          cat CHANGELOG.md | ./mdq "# ${GIT_TAG}" >changeLogForRelease.md
+          ./mdq "# ${GIT_TAG}" CHANGELOG.md >changeLogForRelease.md
           echo '- `docker pull ghcr.io/sapcc/concourse-netbox-resource:${{ env.GIT_TAG }}`' >>changeLogForRelease.md
-          cat changeLogForRelease.md | ./mdq "# ${GIT_TAG}"
+          ./mdq "# ${GIT_TAG}" changeLogForRelease.md
       - name: 'create release'
         uses: 'ncipollo/release-action@v1.20.0'
         with:
@@ -123,3 +101,14 @@ jobs:
           skipIfReleaseExists: true
           allowUpdates: true
           updateOnlyUnreleased: true
+      - name: 'create tag'
+        shell: 'bash'
+        run: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          git config --local user.email "workflow@github.local"
+          git config --local user.name "workflow"
+          git tag -a "${GIT_TAG}" -m "Release v${{ github.run_number }}"
+          git tag --annotate "${GIT_TAG}" --message="$(mdq "# ${GIT_TAG}" CHANGELOG.md)"
+          git push origin "${GIT_TAG}"
