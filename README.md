@@ -43,7 +43,7 @@ resource_types:
     check_every: never
     source:
       repository: registry.fqdn/org/concourse-netbox-resource
-      tag: 0.1.0-20250619163905
+      tag: 0.1.0
 
 resources:
   - name: example.netbox
