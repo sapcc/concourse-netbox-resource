@@ -21,10 +21,15 @@ The output will be a JSON array of objects with their latest versions.
 {
   "source": {
     "url": "https://netbox.example.local",
-    "token": "your-api-token"
+    "token": "your-api-token",
+		"parallel_queries": 4,
+    "use_changelog": true,
+		"initial_lookback": "168h30m"
 		},
 		"filter": {
 			"site_name": ["My Site"],
+			"region_name": ["My Region"],
+			"tenant": ["My Tenant"],
 			"tag": ["my-tag"],
 			"role": ["server"],
 			"device_id": [123],
