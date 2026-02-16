@@ -1,7 +1,7 @@
 
 # Changelog
 
-## v0.1.0
+## 0.1.0
 
 * official netbox library used
 * check command with filter support
