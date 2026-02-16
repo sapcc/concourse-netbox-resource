@@ -31,8 +31,10 @@ jobs:
 
           GIT_TAG="$(./mdq -o json "#" CHANGELOG.md | jq -r .items[0].section.body[0].section.title)"
           GIT_COMMIT="$(git rev-parse HEAD)"
+          GO_VERSION="$(go list -f {{.GoVersion}} -m)"
           echo "GIT_TAG=${GIT_TAG}" >> "$GITHUB_ENV"
           echo "GIT_COMMIT=${GIT_COMMIT}" >> "$GITHUB_ENV"
+          echo "GO_VERSION=${GO_VERSION}" >> "$GITHUB_ENV"
       - name: 'validate env vars'
         shell: 'bash'
         run: |
