@@ -13,7 +13,7 @@ jobs:
       packages: 'write'
     steps:
       - name: 'checkout code'
-        uses: 'actions/checkout@v5.0.0'
+        uses: 'actions/checkout@v5.0.1'
         with:
           fetch-depth: 0
       - name: 'install mdq'
@@ -63,7 +63,7 @@ jobs:
             exit 1
           fi
       - name: 'setup go'
-        uses: 'actions/setup-go@v6.0.0'
+        uses: 'actions/setup-go@v6.2.0'
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: 'golangci-lint'
@@ -98,21 +98,21 @@ jobs:
           ./check -c in -v | grep -q "${GIT_TAG}"
           ./check -c out -v | grep -q "${GIT_TAG}"
       - name: 'container registry login'
-        uses: 'docker/login-action@v3.6.0'
+        uses: 'docker/login-action@v3.7.0'
         with:
           password: "${{ secrets.GITHUB_TOKEN }}"
           registry: 'ghcr.io'
           username: "${{ github.actor }}"
       - name: 'fetch metadata for the image build'
         id: 'meta'
-        uses: 'docker/metadata-action@v5.8.0'
+        uses: 'docker/metadata-action@v5.10.0'
         with:
           images: "ghcr.io/${{ github.repository }}"
           tags: |
             type=raw,value=${{ env.GIT_TAG }}
             type=raw,value=draft
       - name: 'build and push image'
-        uses: 'docker/build-push-action@v6.18.0'
+        uses: 'docker/build-push-action@v6.19.2'
         with:
           context: '.'
           build-args: |

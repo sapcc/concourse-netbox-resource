@@ -78,8 +78,10 @@ The project uses two main workflows that work together to ensure code quality an
   - Checks out code
   - Installs [mdq](https://github.com/yshavit/mdq) tool for changelog parsing
   - Populates environment variables:
+    - `BUILD_DATE` - Current UTC timestamp
     - `GIT_TAG` - Version extracted from CHANGELOG.md
     - `GIT_COMMIT` - Current commit SHA
+    - `GO_VERSION` - Go version from go.mod
   - Validates environment variables:
     - Verifies version format matches `X.Y.Z` pattern
     - Checks that the git tag doesn't already exist
@@ -89,7 +91,7 @@ The project uses two main workflows that work together to ensure code quality an
     - version tag (e.g., `1.2.3`)
     - `release` tag
     - `latest` tag
-  - Builds and pushes `linux/amd64` Docker image with build argument:
+  - Builds and pushes `linux/amd64` Docker image with build arguments:
     - `BUILDER_VERSION` - Go builder image version
     - `GIT_COMMIT` - Current commit SHA
     - `GIT_TAG` - Version from changelog
@@ -191,12 +193,12 @@ The complete release process follows this flow:
 ## Dependencies
 
 - **Actions Used:**
-  - `actions/checkout@v5.0.0` - Code checkout
-  - `actions/setup-go@v6.0.0` - Go environment setup
+  - `actions/checkout@v5.0.1` - Code checkout
+  - `actions/setup-go@v6.2.0` - Go environment setup
   - `golangci/golangci-lint-action@v8.0.0` - Static analysis
-  - `docker/login-action@v3.6.0` - Container registry authentication
-  - `docker/metadata-action@v5.8.0` - Docker metadata generation
-  - `docker/build-push-action@v6.18.0` - Container building and pushing
+  - `docker/login-action@v3.7.0` - Container registry authentication
+  - `docker/metadata-action@v5.10.0` - Docker metadata generation
+  - `docker/build-push-action@v6.19.2` - Container building and pushing
   - `ncipollo/release-action@v1.20.0` - GitHub release creation
 
 - **External Tools:**
