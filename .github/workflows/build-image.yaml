@@ -47,8 +47,8 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
 
-          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9]+)\.(0|[1-9]+)\.(0|[1-9]+)$ ]]; then
-            echo "Invalid version format: ${GIT_TAG} does not match pattern vX.Y.Z"
+          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid version format: ${GIT_TAG} does not match pattern X.Y.Z"
             echo 'Examples:'
             echo -e "  valid:\t0.0.1"
             echo -e "  invalid:\t00.0.1"

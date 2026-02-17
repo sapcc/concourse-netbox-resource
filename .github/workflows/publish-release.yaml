@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: 'checkout code'
         uses: 'actions/checkout@v5.0.1'
+        with:
+          fetch-depth: 0
       - name: 'install mdq'
         shell: 'bash'
         run: |
@@ -43,8 +45,8 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
 
-          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9]+)\.(0|[1-9]+)\.(0|[1-9]+)$ ]]; then
-            echo "Invalid version format: ${GIT_TAG} does not match pattern vX.Y.Z"
+          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid version format: ${GIT_TAG} does not match pattern X.Y.Z"
             echo 'Examples:'
             echo -e "  valid:\t0.0.1"
             echo -e "  invalid:\t00.0.1"
@@ -96,9 +98,9 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
 
-          ./mdq "# ${GIT_TAG}" CHANGELOG.md >changeLogForRelease.md
+          ./mdq '# "'"${GIT_TAG}"'"' CHANGELOG.md >changeLogForRelease.md
           echo '- `docker pull ghcr.io/sapcc/concourse-netbox-resource:${{ env.GIT_TAG }}`' >>changeLogForRelease.md
-          ./mdq "# ${GIT_TAG}" changeLogForRelease.md
+          ./mdq '# "'"${GIT_TAG}"'"' changeLogForRelease.md
       - name: 'create release'
         uses: 'ncipollo/release-action@v1.20.0'
         with:
@@ -117,6 +119,5 @@ jobs:
 
           git config --local user.email "workflow@github.local"
           git config --local user.name "workflow"
-          git tag -a "${GIT_TAG}" -m "Release v${{ github.run_number }}"
-          git tag --annotate "${GIT_TAG}" --message="$(mdq "# ${GIT_TAG}" CHANGELOG.md)"
+          git tag --annotate "${GIT_TAG}" --message="$(./mdq "# \"${GIT_TAG}\"" CHANGELOG.md)"
           git push origin "${GIT_TAG}"
