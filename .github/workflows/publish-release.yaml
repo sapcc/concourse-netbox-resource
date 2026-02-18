@@ -111,13 +111,3 @@ jobs:
           skipIfReleaseExists: true
           allowUpdates: true
           updateOnlyUnreleased: true
-      - name: 'create tag'
-        shell: 'bash'
-        run: |
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          git config --local user.email "workflow@github.local"
-          git config --local user.name "workflow"
-          git tag --annotate "${GIT_TAG}" --message="$(./mdq "# \"${GIT_TAG}\"" CHANGELOG.md)"
-          git push origin "${GIT_TAG}"

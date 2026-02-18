@@ -50,7 +50,7 @@ The project uses two main workflows that work together to ensure code quality an
     - Verifies version format matches `X.Y.Z` pattern (e.g., `1.2.3`)
     - Checks that the git tag doesn't already exist
   - Sets up Go using version from go.mod
-  - Runs [golangci-lint](https://github.com/golangci/golangci-lint) v2.4.0 for static code analysis
+  - Runs [golangci-lint](https://github.com/golangci/golangci-lint) for static code analysis
   - Runs [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) for vulnerability scanning
   - Executes unit tests with coverage reporting
   - Builds the `check` binary with version information
@@ -75,7 +75,7 @@ The project uses two main workflows that work together to ensure code quality an
 
 #### Jobs and Steps
 - **createRelease:**
-  - Checks out code
+  - Checks out code with full history (fetch-depth: 0)
   - Installs [mdq](https://github.com/yshavit/mdq) tool for changelog parsing
   - Populates environment variables:
     - `BUILD_DATE` - Current UTC timestamp
@@ -104,10 +104,7 @@ The project uses two main workflows that work together to ensure code quality an
     - Sets `makeLatest: "legacy"` for latest release handling
     - Skips if release already exists
     - Updates only unreleased releases
-  - Creates and pushes git tag:
-    - Configures git user
-    - Creates annotated tag with changelog content
-    - Pushes tag to origin
+    - Creates git tag automatically via the release action
 
 ## Environment Variables
 
@@ -154,7 +151,6 @@ flowchart TB
 
     subgraph "Github Releases & Tags"
         E --> PR
-        E --> GT
     end
 
     U --Push to feature branch--> D
@@ -165,8 +161,7 @@ flowchart TB
     U(Developer)
     CID@{ shape: div-rect, label: "Draft container image\n(draft, X.Y.Z)" }
     CIR@{ shape: div-rect, label: "Release container image\n(latest, release, X.Y.Z)" }
-    PR@{ shape: lin-rect, label: "Published Release" }
-    GT@{ shape: lin-rect, label: "Git Tag" }
+    PR@{ shape: lin-rect, label: "Published Release\n(with Git Tag)" }
 ```
 
 ## Release Process
@@ -187,8 +182,7 @@ The complete release process follows this flow:
    - Merge the approved changes to the `master` branch
    - This triggers the [Publish Release workflow](#publish-release-workflow) which:
      - Builds and pushes the release container image
-     - Creates a GitHub release with the changelog
-     - Creates and pushes a git tag for the version
+     - Creates a GitHub release with the changelog (including a git tag)
 
 ## Dependencies
 
