@@ -1,6 +1,6 @@
 ARG BUILDER_NAME="golang"
 ARG BUILDER_VERSION="1.25.0-bookworm"
-ARG BASE_NAME="gcr.io/distroless/static-debian12"
+ARG BASE_NAME="gcr.io/distroless/static-debian13"
 ARG BASE_VERSION="latest"
 ARG GIT_COMMIT="undefined"
 ARG GIT_TAG="undefined"

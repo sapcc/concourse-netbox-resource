@@ -13,7 +13,9 @@ jobs:
       packages: 'write'
     steps:
       - name: 'checkout code'
-        uses: 'actions/checkout@v5.0.0'
+        uses: 'actions/checkout@v5.0.1'
+        with:
+          fetch-depth: 0
       - name: 'install mdq'
         shell: 'bash'
         run: |
@@ -29,18 +31,22 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
 
+          BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           GIT_TAG="$(./mdq -o json "#" CHANGELOG.md | jq -r .items[0].section.body[0].section.title)"
           GIT_COMMIT="$(git rev-parse HEAD)"
+          GO_VERSION="$(go list -f {{.GoVersion}} -m)"
+          echo "BUILD_DATE=${BUILD_DATE}" >> "$GITHUB_ENV"
           echo "GIT_TAG=${GIT_TAG}" >> "$GITHUB_ENV"
           echo "GIT_COMMIT=${GIT_COMMIT}" >> "$GITHUB_ENV"
+          echo "GO_VERSION=${GO_VERSION}" >> "$GITHUB_ENV"
       - name: 'validate env vars'
         shell: 'bash'
         run: |
           #!/usr/bin/env bash
           set -euo pipefail
 
-          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9]+)\.(0|[1-9]+)\.(0|[1-9]+)$ ]]; then
-            echo "Invalid version format: ${GIT_TAG} does not match pattern vX.Y.Z"
+          if [[ ! "${GIT_TAG}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid version format: ${GIT_TAG} does not match pattern X.Y.Z"
             echo 'Examples:'
             echo -e "  valid:\t0.0.1"
             echo -e "  invalid:\t00.0.1"
@@ -55,18 +61,18 @@ jobs:
             exit 1
           fi
       - name: 'setup go'
-        uses: 'actions/setup-go@v6.0.0'
+        uses: 'actions/setup-go@v6.2.0'
         with:
           go-version: "${{ env.GO_VERSION }}"
       - name: 'container registry login'
-        uses: 'docker/login-action@v3.6.0'
+        uses: 'docker/login-action@v3.7.0'
         with:
           password: "${{ secrets.GITHUB_TOKEN }}"
           registry: 'ghcr.io'
           username: "${{ github.actor }}"
       - name: 'fetch metadata for the image build'
         id: 'meta'
-        uses: 'docker/metadata-action@v5.8.0'
+        uses: 'docker/metadata-action@v5.10.0'
         with:
           images: "ghcr.io/${{ github.repository }}"
           tags: |
@@ -74,10 +80,14 @@ jobs:
             type=raw,value=release
             type=raw,value=latest
       - name: 'build and push image'
-        uses: 'docker/build-push-action@v6.18.0'
+        uses: 'docker/build-push-action@v6.19.2'
         with:
           context: '.'
-          build-args: "BUILDER_VERSION=${{ env.GO_VERSION }}-bookworm"
+          build-args: |
+             BUILDER_VERSION=${{ env.GO_VERSION }}-bookworm
+             GIT_COMMIT=${{ env.GIT_COMMIT }}
+             GIT_TAG=${{ env.GIT_TAG }}
+             BUILD_DATE=${{ env.BUILD_DATE }}
           labels: "${{ steps.meta.outputs.labels }}"
           tags: "${{ steps.meta.outputs.tags }}"
           platforms: 'linux/amd64'
@@ -88,9 +98,9 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
 
-          ./mdq "# ${GIT_TAG}" CHANGELOG.md >changeLogForRelease.md
+          ./mdq '# "'"${GIT_TAG}"'"' CHANGELOG.md >changeLogForRelease.md
           echo '- `docker pull ghcr.io/sapcc/concourse-netbox-resource:${{ env.GIT_TAG }}`' >>changeLogForRelease.md
-          ./mdq "# ${GIT_TAG}" changeLogForRelease.md
+          ./mdq '# "'"${GIT_TAG}"'"' changeLogForRelease.md
       - name: 'create release'
         uses: 'ncipollo/release-action@v1.20.0'
         with:
@@ -109,6 +119,5 @@ jobs:
 
           git config --local user.email "workflow@github.local"
           git config --local user.name "workflow"
-          git tag -a "${GIT_TAG}" -m "Release v${{ github.run_number }}"
-          git tag --annotate "${GIT_TAG}" --message="$(mdq "# ${GIT_TAG}" CHANGELOG.md)"
+          git tag --annotate "${GIT_TAG}" --message="$(./mdq "# \"${GIT_TAG}\"" CHANGELOG.md)"
           git push origin "${GIT_TAG}"
