@@ -2,13 +2,15 @@ package filter
 
 type NetboxObject struct {
 	SiteName         []string        `json:"site_name,omitempty"`
+	RegionName       []string        `json:"region_name,omitempty"`
+	Tenant           []string        `json:"tenant,omitempty"`
 	Tag              []string        `json:"tag,omitempty"`
 	Role             []string        `json:"role,omitempty"`
 	DeviceId         []int32         `json:"device_id,omitempty"`
 	DeviceName       []string        `json:"device_name,omitempty"`
 	DeviceType       []string        `json:"device_type,omitempty"`
 	DeviceStatus     []string        `json:"device_status,omitempty"`
-	ServerInterface  ServerInterface `json:"server_interface,omitempty"`
+	ServerInterface  ServerInterface `json:"server_interface"`
 	GetConfigContext *bool           `json:"get_config_context,omitempty"`
 }
 

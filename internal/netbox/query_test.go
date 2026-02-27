@@ -59,11 +59,11 @@ func TestCreateQuery(t *testing.T) {
 
 			switch test.queryType {
 			case "dcimDevice":
-				query := createDeviceQuery(client, ConcourseSourceConfigObject.Source.Filter, ctx)
+				query := createDeviceQuery(client, ConcourseSourceConfigObject.Source.Filter, nil, ctx)
 				fieldInFilter = reflect.ValueOf(ConcourseSourceConfigObject.Source.Filter).FieldByName(test.filterName)
 				fieldInQuery = reflect.ValueOf(query).FieldByName(test.fieldName)
 			case "dcimInterface":
-				query := createInterfaceQuery(client, ConcourseSourceConfigObject.Source.Filter, ctx)
+				query := createInterfaceQuery(client, ConcourseSourceConfigObject.Source.Filter, nil, ctx)
 				fieldInFilter = reflect.ValueOf(ConcourseSourceConfigObject.Source.Filter.ServerInterface).FieldByName(test.filterName)
 				fieldInQuery = reflect.ValueOf(query).FieldByName(test.fieldName)
 			}

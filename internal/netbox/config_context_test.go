@@ -1,6 +1,7 @@
 package netbox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -27,6 +28,10 @@ func TestConfigContextParsing(t *testing.T) {
 	role.SetId(helper.DeviceRoleId)
 	role.SetSlug(helper.DeviceRoleSlug)
 
+	site := netbox.BriefSite{}
+	site.SetId(helper.DeviceSiteId)
+	site.SetSlug(helper.DeviceSiteSlug)
+
 	device.Id = helper.DeviceId
 	device.Url = helper.DeviceApiUrl + fmt.Sprintf("/%d/", device.Id)
 	device.Display = helper.DeviceName
@@ -34,6 +39,7 @@ func TestConfigContextParsing(t *testing.T) {
 	device.DisplayUrl = &displayUrl
 	device.LastUpdated = updatedTime
 	device.Role = role
+	device.Site = site
 	device.SetConfigContext(helper.NetBoxConfigContextData)
 
 	// Test cases
@@ -71,7 +77,7 @@ func TestConfigContextParsing(t *testing.T) {
 			}
 
 			currentDevice := *device
-			result, err := populateDeviceDetails(helper.DeviceName, input, currentDevice)
+			result, err := populateDeviceDetails(helper.DeviceName, input, currentDevice, nil, context.Background())
 			if err != nil {
 				t.Fatalf("Error in populateDeviceDetails: %v", err)
 			}

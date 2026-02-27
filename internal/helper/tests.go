@@ -99,6 +99,8 @@ var (
 	DeviceDisplayUrl string = "http://netbox.example.local/dcim/devices"
 	DeviceRoleId     int32  = 8
 	DeviceRoleSlug   string = "server"
+	DeviceSiteId     int32  = 1
+	DeviceSiteSlug   string = "test-site"
 )
 
 func EnsureFolder(path string) error {
